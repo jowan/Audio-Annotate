@@ -1,0 +1,9 @@
+name = "Audio Annotate"
+description = "Generates and image from audio, comment on the image."
+core = "6.x"
+
+dependencies[] = "comment"
+dependencies[] = "filefield"
+dependencies[] = "transliteration"
+dependencies[] = "jquery_ui"
+dependencies[] = "jplayer"

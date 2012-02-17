@@ -1,0 +1,59 @@
+<?php
+/**
+ * @file
+ * Installation file for Audio Annotate module.
+ */
+/**
+ * Implements hook_schema().
+ */
+function audio_annotate_schema() {
+  $schema['audio_annotate'] = array(
+    'fields' => array(
+      'cid' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'fid' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'aa_width' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'aa_left' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+    ),
+    'primary key' => array('cid'),
+  );
+  return $schema;
+}
+/**
+ * Implements hook_install().
+ */
+function audio_annotate_install() {
+  // Create table.
+  drupal_install_schema('audio_annotate');
+  // Create folder.
+  $dir = file_directory_path() . '/audio_images';
+  file_check_directory($dir, 1);
+}
+/**
+ * Implements hook_uninstall().
+ */
+function audio_annotate_uninstall() {
+  // Remove variables.
+  db_query("DELETE FROM {variable} WHERE name LIKE 'audio_annotate_%'");
+  // Create tables.
+  drupal_uninstall_schema('audio_annotate');
+}

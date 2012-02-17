@@ -1,0 +1,785 @@
+<?php
+/**
+ * @file
+ * Enables users to annotate (comment) audio (images).
+ *
+ * Provides a new CCK formatter for the file field module.
+ * Generates an image of the audio file using LAME.
+ * Creates a UI for placeing comments over the image.
+ */
+
+/**
+ * Implements hook_menu().
+ * AJAX callbacks and Admin form.
+ */
+function audio_annotate_menu() {
+  $items = array();
+  $items['audio-annotate/form/comment/%/%'] = array(
+    'title' => 'comment form',
+    'page arguments' => array(3, 4),
+    'page callback' => 'audio_annotate_comment_form',
+    'access arguments' => array('post comments'),
+    'type' => MENU_CALLBACK,
+  );
+  $items['admin/settings/audio_annotate'] = array(
+    'title' => 'Audio Annotate Settings',
+    'description' => 'Settings for the Audio Annotate module.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('audio_annotate_admin_settings'),
+    'access arguments' => array('administer comments'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+  return $items;
+}
+
+/**
+ *  Admin form for settings various parameters to LAME and for display.
+ */
+function audio_annotate_admin_settings() {
+  $form['lame'] = array(
+    '#type' => 'fieldset',
+    '#collapsible' => TRUE,
+    '#title' => t('LAME'),
+    '#description' => t('LAME settings'),
+  );
+    $form['lame']['audio_annotate_lame_location'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Lame Location'),
+      '#description' => t('Abnsolute system location of LAME'),
+      '#default_value' => variable_get('audio_annotate_lame_location', '/usr/bin/lame'),
+    );
+    $form['lame']['audio_annotate_lame_test'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Test'),
+      '#description' => t('Test LAME settings now'),
+      '#default_value' => 0,
+    );
+    $form['lame']['audio_annotate_lame_debug'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Debug'),
+      '#description' => t('Display LAME command outputs to the user'),
+      '#default_value' => variable_get('audio_annotate_lame_debug', NULL),
+    );
+    $form['lame']['switchs'] = array(
+      '#type' => 'fieldset',
+      '#collapsible' => TRUE,
+      '#title' => t('Switches'),
+      '#description' => t('LAME settings, more info on ') . l(t('sourceforge'), 'http://lame.cvs.sourceforge.net/viewvc/lame/lame/USAGE'),
+    );
+      $form['lame']['switchs']['audio_annotate_1st_pass'] = array(
+        '#type' => 'textfield',
+        '#title' => t('First pass arguments'),
+        '#description' => t('The LAME command arguments to make a low quality mp3'),
+        '#default_value' => variable_get('audio_annotate_1st_pass', '-f -m m -b 16'),
+      );
+      $form['lame']['switchs']['audio_annotate_2nd_pass'] = array(
+        '#type' => 'textfield',
+        '#title' => t('First pass parameters'),
+        '#description' => t('The LAME command arguments to make turn the mp3 to wav for byte extraction'),
+        '#default_value' => variable_get('audio_annotate_2nd_pass', '--decode'),
+      );
+  $form['wave'] = array(
+    '#type' => 'fieldset',
+    '#collapsible' => TRUE,
+    '#title' => t('Wave Display'),
+    '#description' => t('Field Display settings'),
+  );
+    $form['wave']['audio_annotate_bg_col'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Back ground color'),
+      '#description' => t('Back Ground color in HEX inc hash'),
+      '#default_value' => variable_get('audio_annotate_bg_col', '#FFFFFF'),
+    );
+    $form['wave']['audio_annotate_fg_col'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Fore ground color'),
+      '#description' => t('Fore Ground color in HEX inc hash'),
+      '#default_value' => variable_get('audio_annotate_fg_col', '#333333'),
+    );
+  $form['display'] = array(
+    '#type' => 'fieldset',
+    '#collapsible' => TRUE,
+    '#title' => t('Field Display'),
+    '#description' => t('Field Display settings'),
+  );
+    $form['display']['audio_annotate_download'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Download'),
+      '#description' => t('Show file download link'),
+      '#default_value' => variable_get('audio_annotate_download', NULL),
+    );
+  $form['comments'] = array(
+    '#type' => 'fieldset',
+    '#collapsible' => TRUE,
+    '#title' => t('Comments'),
+    '#description' => t('Comment settings'),
+  );
+    $form['comments']['audio_annotate_thread'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Show thread'),
+      '#description' => t('Show comment thread in bubble, else show single comment'),
+      '#default_value' => variable_get('audio_annotate_thread', NULL),
+    );
+    $form['comments']['audio_annotate_bwidth'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Comment bubbble width'),
+      '#description' => t('Width of the comment bubble width in %'),
+      '#default_value' => variable_get('audio_annotate_bwidth', '30'),
+    );
+    $options = array(0 => 'Left', 1 => 'Middle', 2 => 'Right');
+    $form['comments']['audio_annotate_align'] = array(
+      '#type' => 'select',
+      '#title' => t('Comment bubbble alignment'),
+      '#options' => $options,
+      '#description' => t('The alignment of the comment bubble compared to the annotation box'),
+      '#default_value' => variable_get('audio_annotate_align', '1'),
+    );
+  $form['#validate'][] = 'audio_annotate_admin_settings_validate';
+  $form['#submit'][] = 'audio_annotate_admin_settings_submit';
+  return system_settings_form($form);
+}
+
+/**
+ * Custom validation for jplayer_settings_form() form.
+ */
+function audio_annotate_admin_settings_validate($form, &$form_state) {
+  // Check to find lame.
+  $lame = $form_state['values']['audio_annotate_lame_location'];
+  if (!file_exists($lame)) {
+    form_error($form['lame']['audio_annotate_lame_location'], t('LAME not found'));
+  }
+  else {
+    drupal_set_message(t('LAME found at @lame', array('@lame' => $lame)), 'error');
+  }
+  // Make folder.
+  $dir = file_directory_path() . '/' . $form_state['values']['audio_annotate_image_folder'];
+  if (!file_check_directory($dir, 1)) {
+    form_error($form['files']['audio_annotate_image_folder'], t('Directory not created'));
+  }
+}
+
+/**
+ * Custom submit for jplayer_settings_form() form.
+ */
+function audio_annotate_admin_settings_submit($form, &$form_state) {
+  if ($form_state['values']['audio_annotate_lame_test']) {
+    $ll = $form_state['values']['audio_annotate_lame_location'];
+    $output = array();
+    $result = -1;
+    exec($ll . ' --help 2>&1', $output, $result);
+    foreach ($output as $p) {
+      drupal_set_message(t('@p', array('@p' => $p)), 'error');
+    }
+  }
+}
+
+/**
+ * Comment form loaded though JS with some extra markup.
+ * Why am I doing it this way intead of loading it on the page ?
+ * - in the future it will all be ajax.
+ * - it keeps the markup down in pages with lots of nodes.
+ */
+function audio_annotate_comment_form() {
+  // Make our special anntation id.
+  $aid = arg(3) . '-' . arg(4);
+  $p .= '<div class="aa-com_form" aid="' . $aid . '">';
+  $p .= '<div class="aa-com_form_close" aid="' . $aid . '" >close</div>';
+  // Placeholder for iPad workaround idea, using 'nudge' instead of drag.
+  /*
+  $p .= '<div class="aa-com_form_controls" aid="' . $aid . '" >
+            <div class="cwidth">Width
+              <div aid="' . $aid . '" class="width-up">Up</div>
+              <div aid="' . $aid . '" class="width-down">Down</div>
+            </div>
+            <div class="cleft">Left
+              <div aid="' . $aid . '" class="left-up">Up</div>
+              <div aid="' . $aid . '" class="left-down">Down</div>
+            </div>
+          </div>
+        ';
+  */
+  $p .= drupal_get_form('comment_form', array('nid' => arg(3)));
+  $p .= '</div>';
+  return $p;
+}
+
+
+/**
+ * Implements hook_nodeapi().
+ * This is where we call out function to generate the images from audio uploads.
+ */
+function audio_annotate_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
+  switch ($op) {
+    case 'insert':
+      // Check if this node type has fields formatted with audio_annotate.
+      $fields = audio_annotate_get_node_fields($node->type);
+      if (is_array($fields)) {
+        // Cycle though those cck fields that do.
+        foreach ($fields as $field) {
+          if ($node->$field) {
+            // Cycle though those deltas that do.
+            foreach ($node->$field as $aa_field) {
+              // Check to see if it has a file.
+              if ($aa_field['filepath']) {
+                // Generate the image from the audio.
+                audio_annotate_lame_me_up($aa_field['filepath'], $aa_field['filename']);
+              }
+            }
+          }
+        }
+      }
+      break;
+    case 'update':
+      // Check if this node type has fields formatted with audio_annotate.
+      $fields = audio_annotate_get_node_fields($node->type);
+      if (is_array($fields)) {
+        // Cycle though those cck fields that do.
+        foreach ($fields as $field) {
+          if ($node->$field) {
+            // Cycle though those deltas that do.
+            foreach ($node->$field as $aa_field) {
+              // Check to see if it has a file.
+              if ($aa_field['filepath']) {
+                // Generate the image from the audio.
+                audio_annotate_lame_me_up($aa_field['filepath'], $aa_field['filename']);
+              }
+            }
+          }
+        }
+      }
+      break;
+    case 'load':
+      // Should we load the images into the object here ?
+      // Would it be useful ?
+      break;
+  }
+}
+
+/**
+ * Implements CCK's hook_field_formatter_info().
+ * Creates an entry in the sisplay settings for a CCK file field.
+ */
+function audio_annotate_field_formatter_info() {
+  $formatters = array();
+  $formatters['audio_annotate'] = array(
+    'label' => t('Annotations and player'),
+    'field types' => array('filefield'),
+    'multiple values' => CONTENT_HANDLE_CORE,
+    'description' => t('Audio file image, annotations and player.'),
+  );
+  return $formatters;
+}
+
+/**
+ * Implements hook_theme().
+ * Allows user to override the display.
+ */
+function audio_annotate_theme() {
+  $theme = array(
+    'audio_annotate_formatter_audio_annotate' => array(
+      'arguments' => array('element' => NULL),
+    ),
+  );
+  return $theme;
+}
+
+/**
+ * Theme function for the audio annotate formatter.
+ * The actual markup for the formatter.
+ */
+function theme_audio_annotate_formatter_audio_annotate($element) {
+  // Only render the element if there is a file ID.
+  if ($element['#item']['fid']) {
+    // Invoke an instance of jPlayer - thanks jPlayer :).
+    jplayer_add();
+    $player = theme('jplayer_single', $element);
+    // Add some UI libs for comment area and other things.
+    jquery_ui_add(array('ui.resizable'));
+    // Add our custom scripts and styles.
+    drupal_add_js(drupal_get_path('module', 'audio_annotate') . '/aa_script.js', 'file');
+    drupal_add_css(drupal_get_path('module', 'audio_annotate') . '/aa_style.css');
+    // Add jquery ui base css.
+    drupal_add_css(drupal_get_path('module', 'audio_annotate') . '/ui_base/ui.all.css');
+    // Create some variables for help below.
+    $enid       = $element['#node']->nid;
+    $efid       = $element['#item']['#delta'];
+    $aid        = $enid . '-' . $efid;
+    $file       = base_path() . $element['#item']['filepath'];
+    $name       = $element['#item']['filename'];
+    $imagefile  = file_directory_path() . "/audio_images/{$name}.png";
+    // Check to see if file exists as it should, if not load a default.
+    if (file_exists($imagefile)) {
+      $image = '<img class="image-anotate-image" id="image-anotate-' . $enid . '" src="' . base_path() . $imagefile . '">';
+    }
+    else {
+      $image = 'default_image';
+    }
+    // Only load the comments if enabled.
+    if ($element['#node']->comment > 0) {
+      // Get the comments for the node.
+      $coms   = audio_annotate_get_node_coms($enid);
+      // Get the bubble width var.
+      $bwidth = variable_get('audio_annotate_bwidth', '30');
+      // Sort comments so the widest is load first.
+      if ($coms) {
+        foreach ($coms as $com) {
+          $newcoms[$com->coords['aa_width']] = $com;
+        }
+        $keys = array_keys($newcoms);
+        rsort($keys);
+        foreach ($keys as $key) {
+          $com = $newcoms[$key];
+          if ($com->coords['fid'] == $efid) {
+            if ($com->coords['aa_width'] > 0) {
+              $x++;
+              // Create some variables for help below.
+              $left         = $com->coords['aa_left'];
+              $width        = $com->coords['aa_width'];
+              $links        = module_invoke_all('link', 'comment', $com, 0);
+              // Align the bubbles according to admin settings.
+              switch (variable_get('audio_annotate_align', '1')) {
+                case '0';
+                    $bleft  = $left;
+                  break;
+                case '1';
+                    $bleft  = ($left + ($width / 2) - ($bwidth / 2));
+                  break;
+                case '2';
+                    $bleft  = ($left + (($width / 2) - ($bwidth / 2)) * 2);
+                  break;
+              }
+              // Show top level comment of thread according to admin settings.
+              if (variable_get('audio_annotate_thread', NULL)) {
+                $cbody      = theme('comment', $com, $element['#node'], $links) . audio_annotate_get_comment_children($com->cid, $element['#node']);
+              }
+              else {
+                $cbody      = theme('comment', $com, $element['#node'], $links);
+              }
+              // Create a row of comment areas (divs).
+              $comboxs .= '<div class="aa-com_box" aaleft="' . $left . '" aawidth="' . $width . '" style=" z-index:' . (1000 + $x) . '; left:' . $left . '%; width:' . $width . '%;" id="cid-' . $com->cid . '" aid="' . $aid . '" ><a class="anchor" name="fid-' . $com->cid . '"></a></div>';
+              // Create a row of comment bubbles.
+              $combubbles .= '<div class="com_bubble" aaleft="' . $left . '" style=" width:' . $bwidth . '%; left:' . $bleft . '%;" id="cid-' . $com->cid . '" aid="' . $aid . '" >' . $cbody . '</div>';
+            }
+          }
+        }
+      }
+    }
+    // Format a download using the file field theme formatter.
+    if (variable_get('audio_annotate_download', NULL)) {
+      $file      = $element['#item'];
+      $field     = content_fields($element['#field_name']);
+      $download .= '<div class="download">';
+      $download .= theme('filefield_item', $file, $field);
+      $download .= '</div>';
+    }
+    // Display the annotate comment link if comments are read-write.
+    if ($element['#node']->comment == 2) {
+      $anno_link = '<div class="add_annotation" aid="' . $aid . '">Add Annotation</div>';
+    }
+    /*
+     *  The outputs.
+     */
+    $output .= '<div class="anid" id="' . $aid . '" >';
+    $output .= '<div class="annotateplayer">';
+    $output .= $player;
+    $output .= '<div class="imageandbox" aid="' . $aid . '" >';
+    $output .= '<div class="annobox" aid="' . $aid . '" ></div>';
+    $output .= '<div class="comboxs">' . $comboxs . '</div>';
+    $output .= '<div class="combubbles">' . $combubbles . '</div>';
+    $output .= $image;
+    $output .= '</div>';
+    $output .= '<div class="anno-formarea"  aid="' . $aid . '"></div>';
+    $output .= $anno_link;
+    $output .= $download;
+    $output .= '</div>';
+    $output .= '</div>';
+    return $output;
+  }
+  else {
+    return FALSE;
+  }
+}
+
+/**
+ * Implements hook_comment().
+ * Used to get the coords from the alter'd form and enter them into a table.
+ */
+function audio_annotate_comment(&$comment, $op) {
+  if (user_access('post comments')) {
+    if ($op == 'insert') {
+      // Only enter into the databse if it has a width.
+      if ($comment['aa-width']) {
+        $data = array(
+          'cid' => $comment['cid'],
+          'fid' => $comment['aa-fid'],
+          'aa_width' => $comment['aa-width'],
+          'aa_left' => $comment['aa-left'],
+        );
+        drupal_write_record('audio_annotate', $data);
+      }
+    }
+    if ($op == 'update') {
+        $data = array(
+          'cid' => $comment['cid'],
+          'fid' => $comment['aa-fid'],
+          'aa_width' => $comment['aa-width'],
+          'aa_left' => $comment['aa-left'],
+        );
+        drupal_write_record('audio_annotate', $data, array('cid'));
+    }
+    if ($op == 'view') {
+      $comment->coords = audio_annotate_get_com_coords($comment->cid);
+    }
+  }
+}
+
+/**
+ * Implements hook form_alter().
+ * Here we add a few extra fields for out comment coordintaets and field delta.
+ */
+function audio_annotate_form_alter(&$form, &$form_state, $form_id) {
+  if ($form_id == 'comment_form') {
+    // Load the commenting node.
+    $code = node_load($form['nid']['#value']);
+    // Make sure the node has audio_annotate as one of its cck formatters.
+    if (is_array(audio_annotate_get_node_fields($code->type))) {
+      // Add some styles, basically to hide the form elements.
+      drupal_add_css(drupal_get_path('module', 'audio_annotate') . '/aa_style.css');
+      // If it comment already has coords then load them.
+      if ($coords = audio_annotate_get_com_coords($form['cid']['#value'])) {
+        $def_fid    = $coords['fid'];
+        $def_left   = $coords['aa_left'];
+        $def_width  = $coords['aa_width'];
+        // If not, it must be being loaded from js so use args from js.
+      }
+      else {
+        $def_fid    = arg(4);
+        $def_left   = 0;
+        $def_width  = 0;
+      }
+      $form['aa']['aa-fid'] = array(
+        '#type' => 'textfield',
+        '#default_value' => $def_fid,
+        '#description' => 'The field delta of the audio annotation cck field',
+      );
+      $form['aa']['aa-left'] = array(
+        '#type' => 'textfield',
+        '#default_value' => $def_left,
+        '#description' => 'The percent size of the annotation box from the left of the image',
+      );
+      $form['aa']['aa-width'] = array(
+        '#type' => 'textfield',
+        '#default_value' => $def_width,
+        '#description' => 'The percent size of the annotation box width of the image',
+      );
+    }
+  }
+}
+
+/**
+ * Implements hook_link().
+ * Adds a link in those comments that have annotations.
+ * Triggers JS to fadeIn() the annotation bubble and goto top using anchors.
+ */
+function audio_annotate_link($type, $object, $teaser = FALSE) {
+  if ($type == 'comment') {
+    // Only the ones in the node, not the player, these are using comment-view.
+    if (!$object->coords) {
+      $coords = audio_annotate_get_com_coords($object->cid);
+      if ($coords['aa_width'] > 0) {
+        $t = 'view annotation';
+      }
+      // At the moment my think is..
+      // As these comments are only loaded when the annotation is.
+      // Allow them to work as anchors on that page.
+      // There for its a link to the same page with an anchor to the comment.
+      $path   = $_GET['q'];
+      $frag   = 'fid-' . $object->cid;
+      $links  = array(
+        'audio_annotate_comment_link' => array(
+          'title'       => t($t),
+          'href'        => $path,
+          'fragment'    => $frag,
+          'attributes'  => array(
+            'title'     => t($t),
+            'class'     => 'goto-comment',
+            'rel'       => 'gc-' . $object->cid,
+            'id'        => 'gc-' . $object->nid,
+          ),
+        ),
+      );
+      return $links;
+    }
+  }
+}
+
+/**
+ * Recursive function to generate markup of a comment and its children.
+ *
+ * @param int $cid
+ *   A comment id.
+ * @param object &$node
+ *   A node object, required for theme('comment') called internally.
+ *
+ * @return string
+ *   Custom markup conatining comments and nested replies.
+ */
+function audio_annotate_get_comment_children($cid, &$node) {
+  // Get all comments children.
+  $query = db_query("SELECT cid FROM {comments} WHERE pid='%d' ORDER BY cid DESC", $cid);
+  while ($results = db_fetch_array($query)) {
+    // Let drupal load the comment.
+    $com     = _comment_load($results['cid']);
+    // Let drupal make the links.
+    $links   = module_invoke_all('link', 'comment', $com, 0);
+    // Let drupal make the markup.
+    $comment = theme('comment', $com, $node, $links);
+    // Get the children if any.
+    $replies = audio_annotate_get_comment_children($results['cid'], $node);
+    // Add to out string.
+    $thread .= '<div class="aa_com">' . $comment . '<div class="aa_rply">' . $replies . '</div></div>';
+  }
+  return $thread;
+}
+
+/**
+ * Simple function to used to attach coordintes to a comment.
+ *
+ * @param int $cid
+ *   A comment id.
+ *
+ * @return array
+ *   An array of comment details.
+ */
+function audio_annotate_get_com_coords($cid) {
+  return db_fetch_array(db_query("SELECT fid, aa_left, aa_width FROM {audio_annotate} WHERE cid='%d' ", $cid));
+}
+
+/**
+ * Return and array of comment objects with their extra into attached to them.
+ *
+ * @param int $nid
+ *   A node id.
+ *
+ * @return array
+ *   An array of comment objects.
+ */
+function audio_annotate_get_node_coms($nid) {
+  $query = db_query("SELECT cid FROM {comments} WHERE nid='%d'", $nid);
+  while ($results = db_fetch_array($query)) {
+    // Let drupal load the comment.
+    $com = _comment_load($results['cid']);
+    // Add out extra details to it.
+    $com->coords = audio_annotate_get_com_coords($results['cid']);
+    // Add comment object to array.
+    $coms[] = $com;
+  }
+  return $coms;
+}
+
+/**
+ * Return a nodes types CCK fields that are formatted with audio_annotate.
+ * I couldnt find a Drupal function that does this but there may be one?
+ *
+ * @param string $type
+ *   A node type.
+ *
+ * @return array
+ *   An array of CC field names.
+ */
+function audio_annotate_get_node_fields($type) {
+  $result = db_query("SELECT * FROM {content_node_field_instance} WHERE type_name = '%s' ", $type);
+  while ($type = db_fetch_array($result)) {
+    $display_settings = unserialize($type['display_settings']);
+    if ($display_settings['full']['format'] == 'audio_annotate' || $display_settings['teaser']['format'] == 'audio_annotate') {
+      $fields[] = $type['field_name'];
+    }
+  }
+  if (is_array($fields)) {
+    return $fields;
+  }
+  else {
+    return FALSE;
+  }
+}
+
+/**
+ * Generates an image from an audio upload file.
+ *
+ * @param string $audio_file_path
+ *   The path and file name of the the file as saved in files table.
+ * @param sting $audio_file_name
+ *   The file name of the the file as saved in files table.
+ *
+ * @return string
+ *   The path to the newly generated audio image or FALSE on fail.
+ */
+function audio_annotate_lame_me_up($audio_file_path, $audio_file_name) {
+  ini_set("max_execution_time", "30000");
+  if ($audio_file_path) {
+    $lame     = variable_get('audio_annotate_lame_location', '/usr/bin/lame');
+    $tmpname  = drupal_substr(md5(time()), 0, 10);
+    $tmpmp3   = file_directory_temp() . "/{$tmpname}_r.mp3";
+    $tmpwav   = file_directory_temp() . "/{$tmpname}_w.wav";
+    /* Resample */
+    $swth     = variable_get('audio_annotate_1st_pass', '-f -m m -b 16');
+    $call     = "{$lame} {$audio_file_path} {$swth} {$tmpmp3}";
+    $exe      = "{$call} 2>&1";
+    $output   = array();
+    $result   = -1;
+    exec($exe, $output, $result);
+    // If debug.
+    if (variable_get('audio_annotate_lame_debug', NULL)) {
+      drupal_set_message(t('@call', array('@call' => $call)), 'error');
+      foreach ($output as $p) {
+        drupal_set_message(t('@p', array('@p' => $p)), 'error');
+      }
+    }
+    /* Convert */
+    $swth     = variable_get('audio_annotate_2nd_pass', '--decode');
+    $call     = "{$lame} {$swth} {$tmpmp3} {$tmpwav}";
+    $exe      = "{$call} 2>&1";
+    $output   = array();
+    $result   = -1;
+    exec($exe, $output, $result);
+    // If debug.
+    if (variable_get('audio_annotate_lame_debug', NULL)) {
+      drupal_set_message(t('@call', array('@call' => $call)), 'error');
+      foreach ($output as $p) {
+        drupal_set_message(t('@p', array('@p' => $p)), 'error');
+      }
+    }
+    // Quick check before proceeding.
+    if (!file_exists($tmpwav)) {
+      drupal_set_message(t('WAV file not generated :('), 'error');
+      return;
+    }
+    $handle    = fopen($tmpwav, "r");
+    $heading[] = fread($handle, 4);
+    $heading[] = bin2hex(fread($handle, 4));
+    $heading[] = fread($handle, 4);
+    $heading[] = fread($handle, 4);
+    $heading[] = bin2hex(fread($handle, 4));
+    $heading[] = bin2hex(fread($handle, 2));
+    $heading[] = bin2hex(fread($handle, 2));
+    $heading[] = bin2hex(fread($handle, 4));
+    $heading[] = bin2hex(fread($handle, 4));
+    $heading[] = bin2hex(fread($handle, 2));
+    $heading[] = bin2hex(fread($handle, 2));
+    $heading[] = fread($handle, 4);
+    $heading[] = bin2hex(fread($handle, 4));
+    $peek = hexdec(drupal_substr($heading[10], 0, 2));
+    $byte = $peek / 8;
+    $channel = hexdec(drupal_substr($heading[6], 0, 2));
+    if ($channel == 2) {
+      $omjer = 40;
+    }
+    else {
+      $omjer = 80;
+    }
+    while (!feof($handle)) {
+      $bytes = array();
+      for ($i = 0; $i < $byte; $i++) {
+        $bytes[$i] = fgetc($handle);
+      }
+      switch ($byte) {
+        case 1:
+          $data[] = audio_annotate_findValues($bytes[0], $bytes[1]);
+          break;
+        case 2:
+          if (ord($bytes[1]) & 128) {
+            $temp = 0;
+          }
+          else {
+            $temp = 128;
+          }
+          $temp   = chr((ord($bytes[1]) & 127) + $temp);
+          $data[] = floor(audio_annotate_findValues($bytes[0], $temp) / 256);
+          break;
+      }
+      fread($handle, $omjer);
+    }
+    // Close and cleanup.
+    fclose($handle);
+    unlink($tmpwav);
+    unlink($tmpmp3);
+    // Image generation.
+    // How much detail we want. Larger number means less detail.
+    // Basically, how many bytes/frames to skip processing.
+    // The lower the number means longer processing time.
+    define("DETAIL", 5);
+    $width  = 1000;
+    $height = 100;
+    $foreground = variable_get('audio_annotate_fg_col', '#333333');
+    $background = variable_get('audio_annotate_bg_col', '#FFFFFF');
+    // Create original image width based on amount of detail.
+    $img = imagecreateTRUEcolor(sizeof($data) / DETAIL, $height);
+    // Fill background of image.
+    if ($background == "") {
+      imagesavealpha($img, TRUE);
+      $transparentcolor = imagecolorallocatealpha($img, 0, 0, 0, 127);
+      imagefill($img, 0, 0, $transparentcolor);
+    }
+    else {
+      list($r, $g, $b) = audio_annotate_html2rgb($background);
+      imagefilledrectangle($img, 0, 0, sizeof($data) / DETAIL, $height, imagecolorallocate($img, $r, $g, $b));
+    }
+    // Generate foreground color.
+    list($r, $g, $b) = audio_annotate_html2rgb($foreground);
+    // Loop through frames/bytes of wav data as genearted above.
+    for ($d = 0; $d < sizeof($data); $d += DETAIL) {
+      // Relative value based on height of image being generated.
+      // Data values can range between 0 and 255.
+      $v = (int) ($data[$d] / 255 * $height);
+      // Draw the line on the image using the $v.
+      imageline($img, $d / DETAIL, 0 + ($height - $v), $d / DETAIL, $height - ($height - $v), imagecolorallocate($img, $r, $g, $b));
+    }
+    header("Content-Type: image/png");
+    // Want it resized?.
+    if ($width) {
+      // Resample the image to the proportions defined in the form.
+      $rimg = imagecreateTRUEcolor($width, $height);
+      // Save alpha from original image.
+      imagesavealpha($rimg, TRUE);
+      imagealphablending($rimg, FALSE);
+      // Copy to resized.
+      imagecopyresampled($rimg, $img, 0, 0, 0, 0, $width, $height, sizeof($data) / DETAIL, $height);
+      // Create a string for the file save in the files dir.
+      $image_file_path = file_directory_path() . "/audio_images/{$audio_file_name}.png";
+      // Perform "create image" php function and create file at the given path.
+      imagepng($rimg, $image_file_path);
+      // Release the image variable.
+      imagedestroy($rimg);
+      // Return the path to the new image.
+      if (!file_exists($image_file_path)) {
+        drupal_set_message(t('Image not generated'), 'error');
+        return;
+      }
+      return ($image_file_path);
+    }
+  }
+  return FALSE;
+}
+
+/**
+ * Byte Bashing function.
+ * forums.devshed.com/php-development-5/reading-16-bit-wav-file-318740.html.
+ */
+function audio_annotate_findValues($byte1, $byte2) {
+  $byte1 = hexdec(bin2hex($byte1));
+  $byte2 = hexdec(bin2hex($byte2));
+  return ($byte1 + ($byte2 * 256));
+}
+
+/**
+ * Conversion function.
+ * forums.clantemplates.com/showthread.php?t=133805.
+ */
+function audio_annotate_html2rgb($input) {
+  $input = ($input[0] == "#") ? drupal_substr($input, 1, 6):drupal_substr($input, 0, 6);
+  return array(
+    hexdec(drupal_substr($input, 0, 2)),
+    hexdec(drupal_substr($input, 2, 2)),
+    hexdec(drupal_substr($input, 4, 2)),
+  );
+}
