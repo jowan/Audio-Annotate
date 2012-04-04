@@ -5,7 +5,7 @@
 
 (function ($) {
 
-Drupal.jPlayer = Drupal.jPlayer || { active: false };
+Drupal.jPlayer = Drupal.jPlayer || {active: false};
 
 Drupal.behaviors.jPlayer = function(context) {
   $('.jplayer', context).each(function() {
@@ -19,7 +19,7 @@ Drupal.behaviors.jPlayer = function(context) {
     var active = 0;
     // An array of DOM element links.
     var playlist = [];
-    
+
     // Multi-player specific code.
     if (playerType == 'playlist') {
 
@@ -66,7 +66,7 @@ Drupal.behaviors.jPlayer = function(context) {
 
     // Actually initialize the player.
     $(player).jPlayer({
-      ready: function() { 
+      ready: function() {
         this.element.jPlayer('setFile', this.element.attr('rel'));
         if (Drupal.settings.jPlayer.autoPlay && !Drupal.jPlayer.active) {
           if (playerType == 'playlist') {
@@ -108,8 +108,8 @@ Drupal.behaviors.jPlayer = function(context) {
             $(".com_bubble").each(function(){
                 if($(this).attr('id') == cid){
                     $(this).show();
-                }  
-            });  
+                }
+            });
           }
           else{
             if($(this).hasClass('on')){
@@ -117,7 +117,7 @@ Drupal.behaviors.jPlayer = function(context) {
               $(".com_bubble").each(function(){
                 if($(this).attr('id') == cid){
                     $(this).hide();
-                }  
+                }
               });
               $(this).removeClass('overbox');
               $(this).removeClass('on');

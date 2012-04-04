@@ -3,6 +3,7 @@
  * @file
  * Installation file for Audio Annotate module.
  */
+
 /**
  * Implements hook_schema().
  */

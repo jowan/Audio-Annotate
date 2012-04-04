@@ -3,6 +3,7 @@
  * Drupal behaviors for the audio annotate module.
  * This is defintly based on jQuery "do less - appear to be doing more" theory :).
  */
+
 (function ($) {
   Drupal.behaviors.audioAnnotate = function (context) {
     // If these is an anchor, show the comment box.
@@ -19,13 +20,13 @@
         $('.com_bubble#cid-'+cid).fadeIn();
       }
     }
-    // Load the comment form by ajax. 
+    // Load the comment form by ajax.
     $(".add_annotation").click(function(){
       // Get the neccsssaries.
-      var aid   = $(this).attr("aid");
-      var vals   = aid.split('-');
-      var nid  = vals[0];
-      var fid  = vals[1];
+      var aid = $(this).attr("aid");
+      var vals = aid.split('-');
+      var nid = vals[0];
+      var fid = vals[1];
       // Load the comment for for that nid.
       $('#'+aid+' .anno-formarea').load('/audio-annotate/form/comment/'+nid+'/'+fid+' .aa-com_form');
       // Fade in the form.
@@ -40,12 +41,12 @@
         containment: $('#'+aid+' .imageandbox'),
         handles: "e,w",
         resize: function(event, ui) {
-          var aid   = $(this).attr("aid");
+          var aid = $(this).attr("aid");
           // Get the left and width as percetages against the size of the parent.
-          var parent_width   = parseInt($('#'+aid+' .imageandbox').css('width'));
-          var aaright     = ((ui.position.left + ui.size.width) / parent_width) * 100;
-          var aaleft     = (ui.position.left / parent_width) * 100;
-          var aawidth     = (aaright - aaleft);
+          var parent_width = parseInt($('#'+aid+' .imageandbox').css('width'));
+          var aaright = ((ui.position.left + ui.size.width) / parent_width) * 100;
+          var aaleft = (ui.position.left / parent_width) * 100;
+          var aawidth = (aaright - aaleft);
           // Only sned to form if within boundries.
           if(aaright<=100 && aaleft>=0){
             $('#'+aid+' .anno-formarea input[id^=edit-aa-width]').val(aawidth);
@@ -54,14 +55,14 @@
             $('#'+aid+' .anno-formarea input[id^=edit-aa-left]').val(aaleft);
           }
           // Bring the form along for fun.
-          $('#'+aid+' .anno-formarea').css('left',$(this).position().left);
-        } 
+          $('#'+aid+' .anno-formarea').css('marginLeft',$(this).position().left);
+        }
       });
     });
     // Close the form.
     $(".aa-com_form_close").live('click',function(){
       // Get the nid.
-      var aid   = $(this).attr("aid");
+      var aid = $(this).attr("aid");
       // Hide the form.
       $('#'+aid+' .anno-formarea').fadeOut();
       // Hide the newly created drag box.
@@ -82,7 +83,7 @@
         $(".com_bubble").each(function(){
           if($(this).attr('id')==cid){
             $(this).show();
-          }  
+          }
         });
       },
       function(){
@@ -95,7 +96,7 @@
         $(".com_bubble").each(function(){
           if($(this).attr('id')==cid){
             $(this).hide();
-          }  
+          }
         });
       }
     );
@@ -117,7 +118,6 @@
         var cid = $(this).attr('id');
         $(".aa-com_box").each(function(){
           if($(this).attr('id')==cid){
-            
           }else{
             $(this).show();
           }
@@ -134,29 +134,6 @@
       $('.com_bubble').hide();
       $('.aa-com_box#cid-'+cid).fadeIn();
       $('.com_bubble#cid-'+cid).fadeIn();
-    });  
-    // Sdd some handy incrementors for iPad as jQuery UI doent work yet ?.
-    /*
-    $(".left-up").live('click',function(){
-      var aid = $(this).attr("aid");
-      var val = parseFloat($('#'+aid+' .anno-formarea input[id^=edit-aa-left]').val());
-      $('#'+aid+' .anno-formarea input[id^=edit-aa-left]').val(val+1);
     });
-    $(".left-down").live('click',function(){
-      var aid = $(this).attr("aid");
-      var val = parseFloat($('#'+aid+' .anno-formarea input[id^=edit-aa-left]').val());
-      $('#'+aid+' .anno-formarea input[id^=edit-aa-left]').val(val-1);
-    });
-      $(".width-up").live('click',function(){
-      var aid = $(this).attr("aid");
-      var val = parseFloat($('#'+aid+' .anno-formarea input[id^=edit-aa-width]').val());
-      $('#'+aid+' .anno-formarea input[id^=edit-aa-width]').val(val+1);  
-    });
-    $(".width-down").live('click',function(){
-      var aid = $(this).attr("aid");
-      var val = parseFloat($('#'+aid+' .anno-formarea input[id^=edit-aa-width]').val());
-      $('#'+aid+' .anno-formarea input[id^=edit-aa-width]').val(val-1);
-    });  
-    */
   };
 })(jQuery);

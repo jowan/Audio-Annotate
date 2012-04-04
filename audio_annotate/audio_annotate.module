@@ -184,25 +184,10 @@ function audio_annotate_comment_form() {
   $aid = arg(3) . '-' . arg(4);
   $p .= '<div class="aa-com_form" aid="' . $aid . '">';
   $p .= '<div class="aa-com_form_close" aid="' . $aid . '" >close</div>';
-  // Placeholder for iPad workaround idea, using 'nudge' instead of drag.
-  /*
-  $p .= '<div class="aa-com_form_controls" aid="' . $aid . '" >
-            <div class="cwidth">Width
-              <div aid="' . $aid . '" class="width-up">Up</div>
-              <div aid="' . $aid . '" class="width-down">Down</div>
-            </div>
-            <div class="cleft">Left
-              <div aid="' . $aid . '" class="left-up">Up</div>
-              <div aid="' . $aid . '" class="left-down">Down</div>
-            </div>
-          </div>
-        ';
-  */
   $p .= drupal_get_form('comment_form', array('nid' => arg(3)));
   $p .= '</div>';
   return $p;
 }
-
 
 /**
  * Implements hook_nodeapi().
@@ -210,6 +195,7 @@ function audio_annotate_comment_form() {
  */
 function audio_annotate_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
   switch ($op) {
+
     case 'insert':
       // Check if this node type has fields formatted with audio_annotate.
       $fields = audio_annotate_get_node_fields($node->type);
@@ -229,6 +215,7 @@ function audio_annotate_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
         }
       }
       break;
+
     case 'update':
       // Check if this node type has fields formatted with audio_annotate.
       $fields = audio_annotate_get_node_fields($node->type);
@@ -248,10 +235,7 @@ function audio_annotate_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
         }
       }
       break;
-    case 'load':
-      // Should we load the images into the object here ?
-      // Would it be useful ?
-      break;
+
   }
 }
 
@@ -298,8 +282,6 @@ function theme_audio_annotate_formatter_audio_annotate($element) {
     // Add our custom scripts and styles.
     drupal_add_js(drupal_get_path('module', 'audio_annotate') . '/aa_script.js', 'file');
     drupal_add_css(drupal_get_path('module', 'audio_annotate') . '/aa_style.css');
-    // Add jquery ui base css.
-    drupal_add_css(drupal_get_path('module', 'audio_annotate') . '/ui_base/ui.all.css');
     // Create some variables for help below.
     $enid       = $element['#node']->nid;
     $efid       = $element['#item']['#delta'];
@@ -338,15 +320,19 @@ function theme_audio_annotate_formatter_audio_annotate($element) {
               $links        = module_invoke_all('link', 'comment', $com, 0);
               // Align the bubbles according to admin settings.
               switch (variable_get('audio_annotate_align', '1')) {
+
                 case '0';
                     $bleft  = $left;
                   break;
+
                 case '1';
                     $bleft  = ($left + ($width / 2) - ($bwidth / 2));
                   break;
+
                 case '2';
                     $bleft  = ($left + (($width / 2) - ($bwidth / 2)) * 2);
                   break;
+
               }
               // Show top level comment of thread according to admin settings.
               if (variable_get('audio_annotate_thread', NULL)) {
@@ -372,9 +358,11 @@ function theme_audio_annotate_formatter_audio_annotate($element) {
       $download .= theme('filefield_item', $file, $field);
       $download .= '</div>';
     }
-    // Display the annotate comment link if comments are read-write.
-    if ($element['#node']->comment == 2) {
-      $anno_link = '<div class="add_annotation" aid="' . $aid . '">Add Annotation</div>';
+    // Check to see if the user can comment and node commentable.
+    if (user_access('post comments') || user_access('post comments without approval')) {
+      if ($element['#node']->comment == 2) {
+        $anno_link = '<div class="add_annotation" aid="' . $aid . '">Add Annotation</div>';
+      }
     }
     /*
      *  The outputs.
@@ -405,7 +393,7 @@ function theme_audio_annotate_formatter_audio_annotate($element) {
  * Used to get the coords from the alter'd form and enter them into a table.
  */
 function audio_annotate_comment(&$comment, $op) {
-  if (user_access('post comments')) {
+  if (user_access('post comments') || user_access('post comments without approval')) {
     if ($op == 'insert') {
       // Only enter into the databse if it has a width.
       if ($comment['aa-width']) {
@@ -419,13 +407,13 @@ function audio_annotate_comment(&$comment, $op) {
       }
     }
     if ($op == 'update') {
-        $data = array(
-          'cid' => $comment['cid'],
-          'fid' => $comment['aa-fid'],
-          'aa_width' => $comment['aa-width'],
-          'aa_left' => $comment['aa-left'],
-        );
-        drupal_write_record('audio_annotate', $data, array('cid'));
+      $data = array(
+        'cid' => $comment['cid'],
+        'fid' => $comment['aa-fid'],
+        'aa_width' => $comment['aa-width'],
+        'aa_left' => $comment['aa-left'],
+      );
+      drupal_write_record('audio_annotate', $data, array('cid'));
     }
     if ($op == 'view') {
       $comment->coords = audio_annotate_get_com_coords($comment->cid);
@@ -683,9 +671,11 @@ function audio_annotate_lame_me_up($audio_file_path, $audio_file_name) {
         $bytes[$i] = fgetc($handle);
       }
       switch ($byte) {
+
         case 1:
           $data[] = audio_annotate_findValues($bytes[0], $bytes[1]);
           break;
+
         case 2:
           if (ord($bytes[1]) & 128) {
             $temp = 0;
@@ -696,6 +686,7 @@ function audio_annotate_lame_me_up($audio_file_path, $audio_file_name) {
           $temp   = chr((ord($bytes[1]) & 127) + $temp);
           $data[] = floor(audio_annotate_findValues($bytes[0], $temp) / 256);
           break;
+
       }
       fread($handle, $omjer);
     }
@@ -776,7 +767,7 @@ function audio_annotate_findValues($byte1, $byte2) {
  * forums.clantemplates.com/showthread.php?t=133805.
  */
 function audio_annotate_html2rgb($input) {
-  $input = ($input[0] == "#") ? drupal_substr($input, 1, 6):drupal_substr($input, 0, 6);
+  $input = ($input[0] == "#") ? drupal_substr($input, 1, 6) : drupal_substr($input, 0, 6);
   return array(
     hexdec(drupal_substr($input, 0, 2)),
     hexdec(drupal_substr($input, 2, 2)),

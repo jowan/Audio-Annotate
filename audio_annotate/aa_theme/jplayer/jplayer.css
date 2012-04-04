@@ -1,76 +1,71 @@
-/*
- * jPlayer override styles
- * lets keep it clean for themers!
- */
-
-/* do not edit */
 .anid .jp-progress {
-  overflow: hidden;
   background-color: #ddd;
-  width: 100% !important;
   height: 15px;
-  position:relative;
+  overflow: hidden;
+  position: relative;
+  width: 100% !important;
 }
 
-/* others */
-.anid .jp-single-player{
-  clear:both;
+.anid .jp-single-player {
+  clear: both;
 }
+
 .anid .jp-interface {
-  margin:0px;
-  padding:0px;
+  margin: 0;
+  padding: 0;
 }
 
 .anid .jp-load-bar {
-  background-color:  #BA8F8F;
-  width: 0px;
-  height: 100px;
+  background-color: #bababa;
   cursor: pointer;
-  z-index:1000;
-}
-.anid .jp-play-bar {
-  background-color: #8DAFB7;
-  width: 0px;
   height: 15px;
+  width: 0;
+  z-index: 1000;
 }
+
+.anid .jp-play-bar {
+  background-color: #636363;
+  height: 15px;
+  width: 0;
+}
+
 .anid .jp-playlist,
 .anid .jp-play-time,
-.anid .jp-total-time{
-  display:inline;
+.anid .jp-total-time {
+  display: inline;
 }
 
-.anid .jp-single-player ul{
-  float:left;
-  margin:0px;
-  padding:0px;
-}
-
-.anid .jp-single-player ul li{
-  display:inline;
-  padding:0px;
-  margin:0px;
-  list-style:none !important;
-  list-style-image: none !important;
-  list-style-type:none !important;
-  cursor: pointer;
+.anid .jp-single-player ul {
   float: left;
-  margin-right: 2px;
+  margin: 0;
+  padding: 0;
+}
+
+.anid .jp-single-player ul li {
+  cursor: pointer;
+  display: inline;
+  float: left;
+  height: 15px;
+  list-style: none !important;
+  list-style-image: none !important;
+  list-style-type: none !important;
+  margin: 0;
   margin-bottom: 2px;
-  height:15px;
-  width:15px;
-  padding:1px;
+  margin-right: 2px;
+  padding: 1px;
+  width: 15px;
 }
 
 .anid .jp-play-time,
-.anid .jp-total-time{
+.anid .jp-total-time {
   float: left;
-  margin-right: 2px;
+  height: 15px;
+  line-height: 12px;
   margin-bottom: 2px;
-  height:15px;
-  padding:2px 2px 0px 2px;
-  line-height:12px;
+  margin-right: 2px;
+  padding: 2px 2px 0;
 }
 
-.anid .jp-total-time{
-  display:none;
+.anid .jp-total-time {
+  display: none;
 }

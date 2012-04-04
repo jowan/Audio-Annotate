@@ -1,156 +1,246 @@
-/* CONTAINERS   */
-/* do not mess  */
-.annotateplayer{
-  clear:both;
-  width:100%;
+.annotateplayer {
+  clear: both;
+  height: 200px;
+  position: relative;
+  width: 100%;
 }
-.imageandbox{
-  width:100% !important;
-  height:100px;
-  padding:0px;
-  margin:0px;
+
+.imageandbox {
+  height: 100px;
+  margin: 0;
+  max-height: 100px;
+  padding: 0;
+  position: relative;
+  width: 100% !important;
 }
-.comboxs{
-  position:relative;
-  height:100px;
-  width:100% !important;
-  z-index:1000;
+
+.comboxs {
+  height: 100px;
+  position: relative;
+  width: 100% !important;
+  z-index: 1000;
 }
-.combubbles{
-  position:relative;
-  top:0px;
-  height:0px;
-  width:100% !important;
-  z-index:2000;
+
+.combubbles {
+  height: 0;
+  position: relative;
+  top: 0;
+  width: 100% !important;
+  z-index: 2000;
 }
-img.image-anotate-image{
-  position:relative;
-  top:-100px;
-  height:100px !important;
-  width:100%;
+
+img.image-anotate-image {
+  height: 100px !important;
+  position: relative;
+  top: -100px;
+  width: 100%;
 }
-.anid{
-  margin-bottom:20px;
+
+.anid {
+  margin-bottom: 20px;
 }
-/* comment boxes */
-.aa-com_box{
-  margin-right:-1px;
-  margin-bottom:-1px;
-  border:1px dotted red;
+
+.aa-com_box {
   background: url('black_trans.png') top left;
-  position:absolute;
-  height:98px;
-  z-index:1000;
+  border: 1px dotted red;
+  height: 98px;
+  margin-bottom: -1px;
+  margin-right: -1px;
+  position: absolute;
+  z-index: 1000;
 }
-.overbox{
-  border:1px dashed red;
+
+.overbox {
+  border: 1px dashed red;
 }
-/* comment bubles */
-.com_bubble{
-  border:1px solid gray;
-  position:absolute;
-  top:0px;
-  z-index:2000;
-  background-color:white;
-  overflow:hidden;
-  border-radius:5px;
-  box-shadow: 0 3px 3px 3px #D6D6D6;
-  display:none;
+
+.com_bubble {
+  background-color: white;
+  border: 1px solid gray;
+  border-radius: 5px;
+  box-shadow: 0 3px 3px 3px #d6d6d6;
+  display: none;
+  overflow: hidden;
+  position: absolute;
+  top: 0;
+  z-index: 2000;
 }
-.com_bubble .comment{
-  margin:0px;
-  padding:5px;
+
+.com_bubble .comment {
+  margin: 0;
+  padding: 5px;
 }
+
 .com_bubble .comment,
-.com_bubble .comment a{
-  font-size:smaller;
+.com_bubble .comment a {
+  font-size: smaller;
 }
-/* form */
-.anno-formarea{
-  border:1px solid gray;
-  position:absolute;
-  z-index:2000;
-  background-color:white;
-  padding:10px;
-  width:300px;
-  display:none;
-  margin-top:0px;
+
+.anno-formarea {
+  background-color: white;
+  border: 1px solid gray;
+  display: none;
+  margin-top: 0;
+  padding: 10px;
+  position: absolute;
+  width: 300px;
+  z-index: 2000;
 }
-.anno-formarea input#edit-upload.form-file{
-  max-width:50px;
-  width:50px;
-  display:block;
+
+.anno-formarea input#edit-upload.form-file {
+  display: block;
+  max-width: 50px;
+  width: 50px;
 }
+
 .anno-formarea input,
-.anno-formarea .form-textarea{
-  width:98%;
+.anno-formarea .form-textarea {
+  width: 98%;
 }
-.anno-formarea .form-textarea{
-  height:50px;
+
+.anno-formarea .form-textarea {
+  height: 50px;
 }
+
 .anno-formarea .form-submit,
-.anno-formarea .form-preview{
-  width:auto;
-  float:left;
+.anno-formarea .form-preview {
+  float: left;
+  width: auto;
 }
-.aa-com_form_close{
-  text-align:right;
+
+.aa-com_form_close {
+  text-align: right;
 }
-.aa-com_form_close:hover{
-  cursor:pointer;
-  text-decoration:underline;
+
+.aa-com_form_close:hover {
+  cursor: pointer;
+  text-decoration: underline;
 }
+
 #edit-aa-fid-wrapper,
 #edit-aa-left-wrapper,
-#edit-aa-width-wrapper{
-  display:none;
+#edit-aa-width-wrapper {
+  display: none;
 }
-/* annotate drag box */
-.annobox{
-  position:absolute;
-  margin-bottom:-100px;
-  border:1px dotted red;
-  height:98px;
-  width:10px;
-  display:none;
+
+.annobox {
   background: url('black_trans.png') top left;
-  z-index:2000;
+  border: 1px dotted red;
+  display: none;
+  height: 100px;
+  min-width: 10px;
+  position: absolute !important;
+  width: 10px;
+  z-index: 2000;
 }
-.annobox .ui-resizable-w:hover{
-  border:1px solid black;
+
+.annobox.ui-resizable {
+  height: 100px;
 }
-.annobox .ui-resizable-e:hover{
-  border:1px solid black;
+
+.annobox .ui-resizable-w:hover,
+.annobox .ui-resizable-e:hover {
+  border: 1px solid black;
 }
-/* links */
+
+.annobox .ui-resizable-e {
+  cursor: e-resize;
+  height: 98px;
+  right: -5px;
+  top: 0;
+  width: 7px;
+}
+
+.annobox .ui-resizable-w {
+  cursor: w-resize;
+  height: 98px;
+  left: -5px;
+  top: 0;
+  width: 7px;
+}
+
+.annobox .ui-resizable-handle {
+  display: block;
+  position: absolute;
+  z-index: 99999;
+}
+
 .add_annotation,
-.goto-comment{
-  color:#2892E2;
+.goto-comment {
+  color: #2892e2;
 }
+
 .goto-comment:hover,
-.add_annotation:hover{
-  cursor:pointer;
-  text-decoration:underline;
+.add_annotation:hover {
+  cursor: pointer;
+  text-decoration: underline;
 }
+
 .add_annotation,
-.annotateplayer .download{
-  clear:both;
+.annotateplayer .download {
+  clear: both;
+  position: relative;
 }
-.annotateplayer .download label{
-  float:left;
+
+.annotateplayer .download label {
+  float: left;
 }
-/* comment indentation in bubbles */
+
 .aa_com {
-  margin-left:10px;
+  margin-left: 10px;
 }
-/* little tab above comment */
-a.anchor{
-  display:block;
-  height:15px;
-  width:3px;
-  background-color:gray;
-  margin-top:-16px;
-  margin-left:-1px;
-  border:1px dotted red;
-  border-bottom:0px;
+
+a.anchor {
+  background-color: gray;
+  border: 1px dotted red;
+  border-bottom: 0;
+  display: block;
+  height: 15px;
+  margin-left: -1px;
+  margin-top: -16px;
+  width: 3px;
+}
+
+.aa_player_btn {
+  background-image: url(icons.png);
+  background-position: -160px -160px;
+  border: 1px solid #d3d3d3;
+  border-radius: 4px 4px 4px 4px;
+  height: 10px;
+  outline: medium none;
+  overflow: hidden;
+  width: 10px;
+}
+
+.aa_play,
+.aa_pause,
+.aa_stop,
+.aa_volume-min,
+.aa_volume-max {
+  text-indent: 100px;
+}
+
+.aa_play {
+  background-position: 0 -160px;
+}
+
+.aa_pause {
+  background-position: -17px -160px;
+}
+
+.aa_stop {
+  background-position: -96px -160px;
+}
+
+.aa_volume-min {
+  background-position: -127px -160px;
+}
+
+.aa_volume-max {
+  background-position: -144px -160px;
+}
+
+.aa_play-time,
+.aa_total-time {
+  width: auto;
 }
